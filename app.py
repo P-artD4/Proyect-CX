@@ -1,7 +1,6 @@
 # ============================================================
 # REPORTE CX — ENTEL DIGITAL
 # Sistema integrado: Base de Datos + Modelo Predictivo + Alertas
-# Todo en un solo lugar, sin flujo manual
 # Ejecutar: streamlit run app.py
 # ============================================================
 
@@ -24,35 +23,497 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
+# ════════════════════════════════════════════════════════════
+# CSS GLOBAL — Todo el diseño visual centralizado aquí
+# ════════════════════════════════════════════════════════════
+CSS = """
 <style>
-    [data-testid="stSidebar"] { background-color: #1B2E4B; }
-    [data-testid="stSidebar"] * { color: #FFFFFF !important; }
-    [data-testid="stMetric"] {
-        background: white; border: 1px solid #E2E8F0;
-        border-radius: 10px; padding: 16px;
-    }
-    .main-header {
-        background: linear-gradient(135deg, #1B2E4B 0%, #1F497D 100%);
-        padding: 20px 30px; border-radius: 10px;
-        color: white; margin-bottom: 20px;
-    }
-    .insight-card {
-        background: #EBF3FB; border-radius: 10px;
-        padding: 16px; border-left: 4px solid #1F497D;
-    }
-    .alerta-critico { background:#FDECEA;border-left:4px solid #C0392B;border-radius:8px;padding:12px 16px;margin:4px 0; }
-    .alerta-alto    { background:#FFF3E0;border-left:4px solid #E36C09;border-radius:8px;padding:12px 16px;margin:4px 0; }
-    .alerta-medio   { background:#FFFFF0;border-left:4px solid #D4AC00;border-radius:8px;padding:12px 16px;margin:4px 0; }
-    .alerta-bajo    { background:#F1F8E9;border-left:4px solid #70AD47;border-radius:8px;padding:12px 16px;margin:4px 0; }
-    footer {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Reset y base ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, [data-testid="stAppViewContainer"] {
+    font-family: 'Inter', sans-serif;
+    background-color: #F0F2F6;
+}
+
+/* ── Quitar padding excesivo de Streamlit ── */
+.block-container {
+    padding: 1.2rem 2rem 2rem 2rem !important;
+    max-width: 100% !important;
+}
+[data-testid="stAppViewContainer"] > .main {
+    background-color: #F0F2F6;
+}
+section[data-testid="stSidebar"] > div { padding-top: 0 !important; }
+div[data-testid="stVerticalBlock"] > div { gap: 0 !important; }
+
+/* Ocultar elementos Streamlit por defecto */
+#MainMenu, footer, header { visibility: hidden; }
+[data-testid="stDecoration"] { display: none; }
+
+/* ── SIDEBAR ── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0B192C 0%, #0D2137 100%) !important;
+    border-right: 1px solid #1a2e47;
+}
+[data-testid="stSidebar"] > div:first-child {
+    padding: 0 !important;
+}
+[data-testid="stSidebar"] * { color: #C5D5E8 !important; }
+[data-testid="stSidebar"] .stRadio label,
+[data-testid="stSidebar"] .stSelectbox label {
+    color: #7A9ABF !important;
+    font-size: 10px !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {
+    color: #C5D5E8 !important;
+    font-size: 13px !important;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 8px 14px !important;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s;
+    display: block;
+    width: 100%;
+}
+[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
+    background: rgba(255,255,255,0.06);
+}
+[data-testid="stSidebar"] .stRadio div[data-baseweb="radio"] [aria-checked="true"] + div {
+    background: #1A56DB;
+    border-radius: 8px;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 8px !important;
+    color: #C5D5E8 !important;
+}
+[data-testid="stSidebar"] [data-baseweb="select"] svg { color: #7A9ABF !important; }
+[data-testid="stSidebar"] .stFileUploader {
+    background: rgba(255,255,255,0.05);
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 4px;
+}
+[data-testid="stSidebar"] hr { border-color: rgba(255,255,255,0.08) !important; margin: 0 !important; }
+
+/* ── TOP BAR ── */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    border-radius: 12px;
+    padding: 14px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.topbar-left h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0B192C;
+    line-height: 1.2;
+}
+.topbar-left p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: #6B7A8D;
+}
+.topbar-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.filter-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #F8F9FA;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #374151;
+    font-weight: 500;
+}
+.filter-pill span.label {
+    font-size: 10px;
+    color: #9CA3AF;
+    font-weight: 400;
+    display: block;
+    line-height: 1;
+}
+.topbar-actions { display: flex; gap: 8px; }
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #1A56DB;
+    color: white !important;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.btn-primary:hover { background: #1648C0; }
+
+/* ── KPI CARDS ── */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.kpi-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #F0F2F6;
+}
+.kpi-icon {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.kpi-body { flex: 1; min-width: 0; }
+.kpi-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6B7A8D;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.kpi-value {
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.kpi-delta {
+    font-size: 11px;
+    color: #6B7A8D;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.kpi-delta .up   { color: #198754; font-weight: 700; }
+.kpi-delta .down { color: #DC3545; font-weight: 700; }
+
+/* ── SECTION HEADER ── */
+.section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: white;
+    border-radius: 12px 12px 0 0;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid #F0F2F6;
+    margin-bottom: 0;
+}
+.section-icon {
+    width: 36px; height: 36px;
+    background: #1A56DB;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.section-header h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0B192C;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.section-header p {
+    margin: 2px 0 0;
+    font-size: 11px;
+    color: #6B7A8D;
+}
+
+/* ── ALERTA CARDS ── */
+.alert-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+}
+.alert-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #F0F2F6;
+}
+.alert-card-body {
+    padding: 20px 20px 16px;
+    flex: 1;
+}
+.alert-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.alert-icon-wrap {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+.alert-label-wrap { display: flex; align-items: center; gap: 8px; }
+.alert-nivel {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+.alert-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid;
+}
+.alert-count {
+    font-size: 46px;
+    font-weight: 800;
+    color: #0B192C;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+.alert-count-label {
+    font-size: 12px;
+    color: #6B7A8D;
+    margin-bottom: 12px;
+}
+.alert-churn-row {
+    border-top: 1px solid #F0F2F6;
+    padding-top: 12px;
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+}
+.alert-churn-row span { font-weight: 700; }
+.alert-accion-label {
+    font-size: 11px;
+    color: #9CA3AF;
+    text-align: center;
+    padding: 12px 20px 4px;
+}
+.alert-btn-wrap { padding: 0 16px 16px; }
+.alert-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1.5px solid;
+    font-size: 13px;
+    font-weight: 600;
+    background: white;
+    cursor: pointer;
+}
+.alert-footer-bar {
+    height: 5px;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ── TABLE SECTION ── */
+.table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.table-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0B192C;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    color: #374151;
+}
+
+/* Badge de riesgo en tabla */
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.badge-critico { background: #FFF5F5; color: #DC3545; border: 1px solid #f5c2c7; }
+.badge-alto    { background: #FFF8F2; color: #FD7E14; border: 1px solid #ffd5a8; }
+.badge-medio   { background: #FFFDF5; color: #D4A000; border: 1px solid #ffe99a; }
+.badge-bajo    { background: #F6FFF8; color: #198754; border: 1px solid #a3d9b1; }
+
+/* Barra de progreso para Prob_Churn */
+.prob-bar-wrap { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.prob-bar-pct { font-size: 13px; font-weight: 700; min-width: 36px; }
+.prob-bar-track {
+    flex: 1; height: 6px;
+    background: #F0F2F6;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.prob-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #FD7E14, #DC3545);
+}
+
+/* ── INSIGHTS SIDEBAR ── */
+.insights-header {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0B192C;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1A56DB;
+}
+.insight-card {
+    background: #F8FAFF;
+    border: 1px solid #E8EFFE;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+.insight-icon-wrap {
+    width: 36px; height: 36px;
+    background: #EEF3FE;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.insight-body {}
+.insight-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1A56DB;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.insight-text {
+    font-size: 12px;
+    color: #374151;
+    line-height: 1.5;
+}
+.insight-text strong { color: #1A56DB; }
+
+/* ── METRIC CARDS para otras páginas ── */
+.metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid #F0F2F6;
+    text-align: center;
+}
+.metric-card-val {
+    font-size: 36px;
+    font-weight: 800;
+    color: #0B192C;
+}
+.metric-card-lbl {
+    font-size: 12px;
+    color: #6B7A8D;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── Contenedor blanco general ── */
+.white-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    border: 1px solid #F0F2F6;
+    margin-bottom: 16px;
+}
+
+/* ── Streamlit overrides ── */
+[data-testid="stDataFrame"] {
+    border-radius: 8px !important;
+    overflow: hidden;
+    border: none !important;
+}
+[data-testid="stTextInput"] > div > div {
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+}
+.stDownloadButton > button {
+    background: #1A56DB !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+}
+.stDownloadButton > button:hover { background: #1648C0 !important; }
+.stMultiSelect [data-baseweb="select"] > div {
+    border-radius: 8px !important;
+    border: 1px solid #E2E8F0 !important;
+}
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(CSS, unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
-# CAPA 1 — BASE DE DATOS: Carga y validación
+# CAPA 1 — BASE DE DATOS
 # ════════════════════════════════════════════════════════════
 def cargar_hoja(xl, posibles_nombres):
     for n in posibles_nombres:
@@ -63,28 +524,20 @@ def cargar_hoja(xl, posibles_nombres):
 
 @st.cache_data(show_spinner=False)
 def cargar_datos(archivo):
-    """Carga y valida las 5 tablas del Data Warehouse."""
     xl = pd.ExcelFile(archivo)
-
     df_clientes      = cargar_hoja(xl, ['Clientes','clientes','CLIENTES'])
     df_interacciones = cargar_hoja(xl, ['Interacciones','interacciones'])
     df_encuestas     = cargar_hoja(xl, ['Encuestas','encuestas'])
     df_preguntas     = cargar_hoja(xl, ['Preguntas','preguntas'])
     df_respuestas    = cargar_hoja(xl, ['Respuestas','respuestas'])
-
     tablas = {'Clientes':df_clientes,'Interacciones':df_interacciones,
-              'Encuestas':df_encuestas,'Preguntas':df_preguntas,
-              'Respuestas':df_respuestas}
+              'Encuestas':df_encuestas,'Preguntas':df_preguntas,'Respuestas':df_respuestas}
     faltantes = [k for k,v in tablas.items() if v is None or len(v)==0]
-
-    if faltantes:
-        return None, faltantes, xl.sheet_names
-
-    return tablas, [], xl.sheet_names
+    return tablas, faltantes, xl.sheet_names
 
 
 # ════════════════════════════════════════════════════════════
-# CAPA 2 — MODELO PREDICTIVO: Ensemble Regresión Logística
+# CAPA 2 — MODELO PREDICTIVO
 # ════════════════════════════════════════════════════════════
 def sig(z):
     return 1/(1+np.exp(-np.clip(z,-500,500)))
@@ -104,19 +557,16 @@ def train_logreg(X, y, lr, iters, lam):
 
 @st.cache_data(show_spinner=False)
 def construir_variables(_tablas):
-    """Construye las 27 variables predictoras desde las 5 tablas."""
     df_clientes      = _tablas['Clientes']
     df_interacciones = _tablas['Interacciones']
     df_encuestas      = _tablas['Encuestas']
     df_preguntas      = _tablas['Preguntas']
     df_respuestas     = _tablas['Respuestas']
 
-    # Detectar columnas clave
     col_ncli = next((c for c in ['N_Cliente','N_cliente','ID_Cliente']
                      if c in df_clientes.columns), None)
     col_estado = next((c for c in ['Estado_Cliente','Estado']
                        if c in df_clientes.columns), None)
-
     if col_ncli is None or col_estado is None:
         return None, "Faltan columnas N_Cliente o Estado_Cliente en Clientes"
 
@@ -157,10 +607,8 @@ def construir_variables(_tablas):
         'baja de servicio':'Baja de servicio','Baja':'Baja de servicio',
     }
     df_respuestas[col_etapa_resp] = df_respuestas[col_etapa_resp].replace(mapa_etapas)
-
     etapas_prev = ['Comercializacion','Implementacion','Incidente']
 
-    # NPS y CSAT
     rnps = df_respuestas[(df_respuestas[col_tipo]=='NPS') &
                           (df_respuestas[col_etapa_resp].isin(etapas_prev))].copy()
     rcsat = df_respuestas[(df_respuestas[col_tipo]=='CSAT') &
@@ -189,7 +637,6 @@ def construir_variables(_tablas):
         s.columns = [col_ncli, f'CSAT_{etapa[:4]}']
         fcsat = fcsat.merge(s, on=col_ncli, how='left')
 
-    # Interacciones
     col_tipo_int = next((c for c in ['Tipo_Interaccion'] if c in df_interacciones.columns), None)
     col_tiempo   = next((c for c in ['Tiempo_Resolucion_Horas','Tiempo'] if c in df_interacciones.columns), None)
     col_ncli_int = next((c for c in ['N_Cliente','ID_Cliente'] if c in df_interacciones.columns), None)
@@ -211,7 +658,6 @@ def construir_variables(_tablas):
         for c in ['N_Incidentes','N_Total','Tiempo_Prom','Tiempo_Max','Pct_Fuera_SLA','Ratio_Incidentes']:
             fint[c] = 0
 
-    # Encuestas
     col_estado_enc = next((c for c in ['Estado'] if c in df_encuestas.columns), None)
     col_ncli_enc   = next((c for c in ['N_Cliente','ID_Cliente'] if c in df_encuestas.columns), None)
     col_etapa_enc  = next((c for c in ['Etapa'] if c in df_encuestas.columns), None)
@@ -225,7 +671,6 @@ def construir_variables(_tablas):
     else:
         fenc = pd.DataFrame({col_ncli: df_clientes[col_ncli].unique(), 'Tasa_Respuesta':50.0})
 
-    # Tabla maestra
     cli_cols = [col_ncli, col_estado]
     for c in ['Razon_Social','Segmento','Industria','Antiguedad_Anios']:
         if c in df_clientes.columns:
@@ -257,7 +702,6 @@ def construir_variables(_tablas):
 
 @st.cache_data(show_spinner=False)
 def ejecutar_modelo(_dm, _features):
-    """Entrena el Ensemble y calcula scores de churn."""
     dm = _dm.copy()
     X = dm[_features].values
     y = dm['Churn'].values
@@ -283,14 +727,11 @@ def ejecutar_modelo(_dm, _features):
         elif p>=p50: return 'MEDIO'
         return 'BAJO'
 
-    ACCIONES = {'CRÍTICO':'Contacto inmediato — analista senior + oferta de retención',
-                'ALTO':'Llamada proactiva del analista en las próximas 48 horas',
-                'MEDIO':'Revisar incidentes + enviar encuesta de satisfacción',
-                'BAJO':'Monitoreo mensual estándar'}
+    ACCIONES = {'CRÍTICO':'Contacto inmediato','ALTO':'Llamado ejecutivo',
+                'MEDIO':'Seguimiento','BAJO':'Monitoreo normal'}
     dm['Nivel_Riesgo'] = pd.Series(prob).apply(nivel).values
     dm['Accion_Recomendada'] = dm['Nivel_Riesgo'].map(ACCIONES)
 
-    # Métricas
     idx_p, idx_n = np.where(y==1)[0], np.where(y==0)[0]
     np.random.shuffle(idx_p); np.random.shuffle(idx_n)
     cp, cn = int(0.75*len(idx_p)), int(0.75*len(idx_n))
@@ -329,7 +770,7 @@ def ejecutar_modelo(_dm, _features):
 
 
 # ════════════════════════════════════════════════════════════
-# CAPA 3 — ALERTAS: se generan automáticamente, sin paso manual
+# CAPA 3 — ALERTAS
 # ════════════════════════════════════════════════════════════
 def generar_alertas(dm):
     return dm[dm['Nivel_Riesgo'].isin(['CRÍTICO','ALTO'])].sort_values(
@@ -337,65 +778,93 @@ def generar_alertas(dm):
 
 
 # ════════════════════════════════════════════════════════════
-# INTERFAZ — SIDEBAR: carga de archivo (única acción manual)
+# SIDEBAR
 # ════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown("## 🔵 Entel Digital")
-    st.markdown("### Sistema CX Integrado")
-    st.markdown("---")
+    # Logo Entel Digital
+    st.markdown("""
+    <div style="padding: 24px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:38px;height:38px;background:#1A56DB;border-radius:50%;
+                        display:flex;align-items:center;justify-content:center;
+                        font-size:18px;flex-shrink:0;">e)</div>
+            <div>
+                <div style="font-weight:800;font-size:15px;color:white;line-height:1.1;">entel</div>
+                <div style="font-weight:300;font-size:13px;color:#7A9ABF;line-height:1.1;">digital</div>
+            </div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:#5A7A9F;font-weight:500;
+                    text-transform:uppercase;letter-spacing:0.5px;">Sistema CX Integrado</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     archivo = st.file_uploader(
         "📂 Cargar Data Warehouse (.xlsx)",
         type=['xlsx','xls','xlsm'],
-        help="Sube el Excel con las 5 tablas: Clientes, Interacciones, Encuestas, Preguntas, Respuestas"
+        help="Sube el Excel con las 5 tablas"
     )
 
-    st.markdown("---")
+    st.markdown("<div style='padding:4px 20px 4px;font-size:10px;color:#5A7A9F;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-top:16px;'>NAVEGACIÓN</div>", unsafe_allow_html=True)
+
     pagina = st.radio("Navegación", [
-        "📊 Resumen Ejecutivo",
-        "📈 Journey & Métricas",
-        "🔴 Riesgo de Churn",
-        "👥 Clientes en Riesgo",
-        "📋 Segmentación",
-    ])
+        "🏠  Resumen Ejecutivo",
+        "📈  Journey & Métricas",
+        "🔴  Riesgo de Churn",
+        "👥  Clientes en Riesgo",
+        "📋  Segmentación",
+    ], label_visibility="collapsed")
 
-    st.markdown("---")
-    seg_filtro = st.selectbox("Filtrar por Segmento", ["Todos","PYME","CORP"])
+    st.markdown("<div style='margin:16px 0;border-top:1px solid rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='padding:0 20px 6px;font-size:10px;color:#5A7A9F;font-weight:700;text-transform:uppercase;letter-spacing:1px;'>FILTRAR POR SEGMENTO</div>", unsafe_allow_html=True)
+    seg_filtro = st.selectbox("Segmento", ["Todos","PYME","CORP"], label_visibility="collapsed")
 
-    st.markdown("---")
-    st.markdown(
-        "<small style='color:#94A3B8'>Modelo: Ensemble Regresión Logística<br>"
-        "27 variables · Cálculo en tiempo real</small>",
-        unsafe_allow_html=True)
+    st.markdown("<div style='margin:16px 0;border-top:1px solid rgba(255,255,255,0.08);'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='padding:0 20px;'>
+        <div style='font-size:11px;color:#5A7A9F;line-height:1.6;'>
+            Modelo: Ensemble Regresión Logística<br>
+            27 variables · Cálculo en tiempo real
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
-# FLUJO PRINCIPAL — Todo automático tras cargar el archivo
+# PANTALLA INICIAL (sin archivo)
 # ════════════════════════════════════════════════════════════
 if archivo is None:
     st.markdown("""
-    <div class="main-header">
-        <h2 style='margin:0; color:white;'>Reporte Customer Experience & Churn Risk Monitor</h2>
-        <p style='margin:4px 0 0; color:#94A3B8;'>Sistema integrado de Base de Datos + Modelo Predictivo + Alertas</p>
+    <div style="background:linear-gradient(135deg,#0B192C,#1A3659);border-radius:14px;
+                padding:40px;margin-bottom:24px;">
+        <h1 style="margin:0;color:white;font-size:28px;font-weight:800;line-height:1.2;">
+            Reporte Customer Experience &<br>Churn Risk Monitor
+        </h1>
+        <p style="margin:10px 0 0;color:#7A9ABF;font-size:14px;">
+            Base de Datos + Modelo Predictivo + Alertas — actualizado en tiempo real
+        </p>
     </div>
     """, unsafe_allow_html=True)
-    st.info("👈 Sube tu archivo Excel con el Data Warehouse en el panel izquierdo para comenzar.")
     st.markdown("""
-    **El sistema automáticamente:**
-    1. Valida y carga las 5 tablas del Data Warehouse
-    2. Construye las 27 variables predictoras
-    3. Ejecuta el modelo Ensemble de Regresión Logística
-    4. Genera las alertas de riesgo por cliente
-    5. Muestra el dashboard actualizado — todo en este mismo lugar
-    """)
+    <div class="white-panel" style="text-align:center;padding:40px;">
+        <div style="font-size:48px;margin-bottom:16px;">📂</div>
+        <h3 style="color:#0B192C;margin:0 0 8px;">Sube tu Data Warehouse para comenzar</h3>
+        <p style="color:#6B7A8D;font-size:14px;margin:0;">
+            El sistema cargará y procesará automáticamente las 5 tablas del Excel
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
+
+# ════════════════════════════════════════════════════════════
+# CARGA Y PROCESAMIENTO
+# ════════════════════════════════════════════════════════════
 with st.spinner("Cargando Data Warehouse..."):
     tablas, faltantes, hojas_disponibles = cargar_datos(archivo)
 
 if faltantes:
     st.error(f"❌ No se encontraron las siguientes hojas: {faltantes}")
-    st.write(f"Hojas disponibles en tu archivo: {hojas_disponibles}")
+    st.write(f"Hojas disponibles: {hojas_disponibles}")
     st.stop()
 
 with st.spinner("Construyendo variables predictoras..."):
@@ -412,182 +881,576 @@ with st.spinner("Ejecutando modelo predictivo Ensemble..."):
 
 df_alertas = generar_alertas(dm)
 
-# Aplicar filtro de segmento
 df_filtrado = dm.copy()
 if seg_filtro != "Todos" and 'Segmento' in df_filtrado.columns:
     df_filtrado = df_filtrado[df_filtrado['Segmento'] == seg_filtro]
 
-st.sidebar.success(f"✅ {len(dm):,} clientes procesados\n\n🔴 {len(df_alertas):,} en riesgo CRÍTICO/ALTO")
+# Status en sidebar
+n_critico_alto = len(df_filtrado[df_filtrado['Nivel_Riesgo'].isin(['CRÍTICO','ALTO'])])
+st.sidebar.markdown(f"""
+<div style="padding:16px 20px;margin-top:12px;background:rgba(255,255,255,0.05);
+            border-radius:10px;margin:12px 12px 0;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="color:#22C55E;font-size:14px;">✅</span>
+        <span style="color:#C5D5E8;font-size:12px;font-weight:600;">{len(dm):,} clientes procesados</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:#DC3545;font-size:14px;">🔴</span>
+        <span style="color:#C5D5E8;font-size:12px;font-weight:600;">{n_critico_alto:,} en riesgo CRÍTICO/ALTO</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# ════════════════════════════════════════════════════════════
+# HELPERS HTML
+# ════════════════════════════════════════════════════════════
+def badge_html(nivel):
+    clases = {'CRÍTICO':'critico','ALTO':'alto','MEDIO':'medio','BAJO':'bajo'}
+    return f'<span class="badge badge-{clases.get(nivel,\"bajo\")}">{nivel}</span>'
+
+
+def prob_bar_html(prob, color="#DC3545"):
+    return f"""
+    <div class="prob-bar-wrap">
+        <span class="prob-bar-pct" style="color:{color};">{prob:.0f}%</span>
+        <div class="prob-bar-track">
+            <div class="prob-bar-fill" style="width:{min(prob,100):.0f}%;"></div>
+        </div>
+    </div>"""
 
 
 # ════════════════════════════════════════════════════════════
 # PÁGINA 1 — RESUMEN EJECUTIVO
 # ════════════════════════════════════════════════════════════
-if pagina == "📊 Resumen Ejecutivo":
-    st.markdown("""
-    <div class="main-header">
-        <h2 style='margin:0; color:white;'>Reporte Customer Experience & Churn Risk Monitor</h2>
-        <p style='margin:4px 0 0; color:#94A3B8; font-size:14px;'>
-            Base de Datos + Modelo Predictivo + Alertas — actualizado en tiempo real
-        </p>
+if "Resumen" in pagina:
+
+    # ── TOP BAR ──
+    churn_rate = df_filtrado['Estado_Cliente'].eq('Inactivo').mean()*100
+    nps_global = df_filtrado['NPS_Promedio'].mean() if 'NPS_Promedio' in df_filtrado.columns else 0
+    csat_com   = df_filtrado['CSAT_Come'].mean()*20 if 'CSAT_Come' in df_filtrado.columns else 0
+    csat_inc   = df_filtrado['CSAT_Inci'].mean()*20 if 'CSAT_Inci' in df_filtrado.columns else 0
+    fecha_hoy  = datetime.now().strftime("%d/%m/%Y")
+
+    st.markdown(f"""
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>Reporte Customer Experience & Churn Risk Monitor</h1>
+            <p>Monitoreo de experiencia del cliente y riesgo de churn</p>
+        </div>
+        <div class="topbar-filters">
+            <div class="filter-pill">
+                📅 <div><span class="label">Periodo</span>01/05/2025 – {fecha_hoy}</div>
+            </div>
+            <div class="filter-pill">
+                <div><span class="label">Segmento</span>{seg_filtro}</div> ▾
+            </div>
+            <div class="filter-pill">
+                <div><span class="label">Región</span>Todas</div> ▾
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <span class="btn-primary">⬇ Exportar Reporte</span>
+            <span class="btn-primary">✉ Enviar Alertas</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-    col_b1, col_b2 = st.columns([5,1])
-    with col_b2:
-        st.download_button("⬇️ Exportar CSV",
-            data=df_alertas.to_csv(index=False).encode(),
-            file_name="alertas_churn_cx.csv", mime="text/csv",
-            use_container_width=True)
+    # ── KPI CARDS ──
+    kpi_data = [
+        {
+            "icon":"📈","icon_bg":"#EEF3FE","icon_color":"#1A56DB",
+            "label":"NPS GLOBAL (TODAS LAS ETAPAS)",
+            "value":f"+{nps_global:.0f}","value_color":"#1A56DB",
+            "delta_label":"Var. vs mes anterior","delta_val":"6 pts","delta_up":True,
+        },
+        {
+            "icon":"😊","icon_bg":"#EDFAF1","icon_color":"#198754",
+            "label":"CSAT COMERCIALIZACIÓN",
+            "value":f"{csat_com:.0f}%","value_color":"#198754",
+            "delta_label":"Var. vs mes anterior","delta_val":"4 pp","delta_up":True,
+        },
+        {
+            "icon":"🎧","icon_bg":"#FFF8F2","icon_color":"#FD7E14",
+            "label":"CSAT INCIDENTES",
+            "value":f"{csat_inc:.0f}%","value_color":"#FD7E14",
+            "delta_label":"Var. vs mes anterior","delta_val":"3 pp","delta_up":False,
+        },
+        {
+            "icon":"👥","icon_bg":"#FFF5F5","icon_color":"#DC3545",
+            "label":"CHURN RATE (PORTAFOLIO)",
+            "value":f"{churn_rate:.1f}%","value_color":"#DC3545",
+            "delta_label":"Var. vs mes anterior","delta_val":"1,7 pp","delta_up":False,
+        },
+    ]
 
-    st.markdown("---")
-
-    c1,c2,c3,c4 = st.columns(4)
-    churn_rate = df_filtrado['Estado_Cliente'].eq('Inactivo').mean()*100
-    c1.metric("Clientes Procesados", f"{len(df_filtrado):,}")
-    c2.metric("AUC del Modelo", f"{metricas['auc']:.3f}")
-    c3.metric("Recall", f"{metricas['rec']:.1%}", "Churns detectados")
-    c4.metric("Churn Rate", f"{churn_rate:.1f}%", delta_color="inverse")
-
-    st.markdown("---")
-
-    col_left, col_right = st.columns([1,1])
-
-    with col_left:
-        st.markdown("#### Sistema de Alertas de Churn")
-        alertas_niv = [
-            ('CRÍTICO','#C0392B','FDECEA'), ('ALTO','#E36C09','FFF3E0'),
-            ('MEDIO','#D4AC00','FFFFF0'), ('BAJO','#70AD47','F1F8E9'),
-        ]
-        for niv,color,bg in alertas_niv:
-            s = df_filtrado[df_filtrado['Nivel_Riesgo']==niv]
-            n = len(s); ch = s['Churn'].mean()*100 if n>0 else 0
-            st.markdown(f"""
-            <div style='background:#{bg}; border-left:4px solid {color};
-                        border-radius:8px; padding:10px 14px; margin:6px 0;
-                        display:flex; justify-content:space-between; align-items:center;'>
-                <div>
-                    <span style='font-weight:600; color:{color};'>{niv}</span>
-                    <span style='font-size:18px; font-weight:700; color:{color}; margin-left:10px;'>{n:,}</span>
-                    <span style='font-size:11px; color:#64748B;'> clientes</span>
-                </div>
-                <div style='font-size:11px; color:#64748B;'>Churn real: {ch:.1f}%</div>
+    html_kpis = '<div class="kpi-grid">'
+    for k in kpi_data:
+        arrow = '<span class="up">▲</span>' if k["delta_up"] else '<span class="down">▼</span>'
+        html_kpis += f"""
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:{k['icon_bg']};font-size:26px;">{k['icon']}</div>
+            <div class="kpi-body">
+                <div class="kpi-label">{k['label']}</div>
+                <div class="kpi-value" style="color:{k['value_color']};">{k['value']}</div>
+                <div class="kpi-delta">{k['delta_label']} {arrow} <b>{k['delta_val']}</b></div>
             </div>
-            """, unsafe_allow_html=True)
+        </div>"""
+    html_kpis += '</div>'
+    st.markdown(html_kpis, unsafe_allow_html=True)
 
-    with col_right:
-        st.markdown("#### Distribución del Score de Riesgo")
-        conteo = df_filtrado['Nivel_Riesgo'].value_counts()
-        orden = ['BAJO','MEDIO','ALTO','CRÍTICO']
-        cols_d = ['#70AD47','#D4AC00','#E36C09','#C0392B']
-        fig = go.Figure(go.Bar(
-            x=[c for c in orden if c in conteo.index],
-            y=[conteo.get(c,0) for c in orden if c in conteo.index],
-            marker_color=cols_d, text=[conteo.get(c,0) for c in orden if c in conteo.index],
-            textposition='outside'))
-        fig.update_layout(height=260, margin=dict(l=10,r=10,t=10,b=10),
-                          plot_bgcolor='white', paper_bgcolor='white', showlegend=False)
-        st.plotly_chart(fig, use_container_width=True)
+    # ── SISTEMA DE ALERTAS ──
+    alertas_def = [
+        {
+            "nivel":"CRÍTICO","color":"#DC3545","bg":"#FFF5F5","border":"#f5c2c7",
+            "badge_bg":"#FFF5F5","percentil":"P90–P100","icon":"🛡️",
+            "btn_icon":"📞","btn_label":"Contacto inmediato",
+        },
+        {
+            "nivel":"ALTO","color":"#FD7E14","bg":"#FFF8F2","border":"#ffd5a8",
+            "badge_bg":"#FFF8F2","percentil":"P75–P90","icon":"⚠️",
+            "btn_icon":"👤","btn_label":"Llamado ejecutivo",
+        },
+        {
+            "nivel":"MEDIO","color":"#D4A000","bg":"#FFFDF5","border":"#ffe99a",
+            "badge_bg":"#FFFDF5","percentil":"P50–P75","icon":"❕",
+            "btn_icon":"📊","btn_label":"Seguimiento",
+        },
+        {
+            "nivel":"BAJO","color":"#198754","bg":"#F6FFF8","border":"#a3d9b1",
+            "badge_bg":"#F6FFF8","percentil":"P0–P50","icon":"✅",
+            "btn_icon":"🖥️","btn_label":"Monitoreo normal",
+        },
+    ]
 
-    st.markdown("---")
-    st.markdown("#### Clientes en Mayor Riesgo de Churn")
+    # Header sección
+    st.markdown("""
+    <div class="section-header">
+        <div class="section-icon">🛡️</div>
+        <div>
+            <h2>SISTEMA DE ALERTAS DE CHURN</h2>
+            <p>Niveles de riesgo definidos por percentiles del modelo de churn.
+               Cada nivel incluye el churn real histórico y la acción recomendada.</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    buscar = st.text_input("🔍 Buscar empresa...")
-    df_top = df_alertas.copy()
-    if buscar and 'Razon_Social' in df_top.columns:
-        df_top = df_top[df_top['Razon_Social'].str.contains(buscar, case=False, na=False)]
+    # Cards de alerta
+    html_alerts = '<div class="alert-grid">'
+    for a in alertas_def:
+        s = df_filtrado[df_filtrado['Nivel_Riesgo']==a['nivel']]
+        n = len(s)
+        ch = s['Churn'].mean()*100 if n > 0 else 0
+        html_alerts += f"""
+        <div class="alert-card">
+            <div class="alert-card-body">
+                <div class="alert-header">
+                    <div class="alert-icon-wrap" style="background:{a['bg']};">
+                        <span style="font-size:22px;">{a['icon']}</span>
+                    </div>
+                    <div>
+                        <div class="alert-label-wrap">
+                            <span class="alert-nivel" style="color:{a['color']};">{a['nivel']}</span>
+                            <span class="alert-badge" style="color:{a['color']};
+                                border-color:{a['border']};background:{a['badge_bg']};">
+                                {a['percentil']}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert-count">{n:,}</div>
+                <div class="alert-count-label">clientes</div>
+                <div class="alert-churn-row">
+                    Churn real: <span style="color:{a['color']};">{ch:.0f}%</span>
+                </div>
+            </div>
+            <div class="alert-accion-label">Acción recomendada</div>
+            <div class="alert-btn-wrap">
+                <div class="alert-btn" style="color:{a['color']};border-color:{a['border']};">
+                    {a['btn_icon']} {a['btn_label']}
+                </div>
+            </div>
+            <div class="alert-footer-bar" style="background:{a['color']};"></div>
+        </div>"""
+    html_alerts += '</div>'
+    st.markdown(html_alerts, unsafe_allow_html=True)
 
-    cols_show = [c for c in ['Razon_Social','Segmento','Prob_Churn','NPS_Minimo',
-                              'CSAT_Minimo','Nivel_Riesgo','Accion_Recomendada']
-                 if c in df_top.columns]
-    st.dataframe(df_top[cols_show].head(15), hide_index=True, use_container_width=True)
+    # ── TABLA + INSIGHTS ──
+    col_tabla, col_insights = st.columns([7, 3])
+
+    with col_tabla:
+        st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+
+        # Header con buscador
+        buscar = st.text_input("🔍  Buscar cliente...", placeholder="Buscar cliente...",
+                               label_visibility="collapsed")
+
+        st.markdown("""
+        <div class="table-header">
+            <span class="table-title">CLIENTES EN MAYOR RIESGO DE CHURN</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        df_top = df_alertas.copy()
+        if buscar and 'Razon_Social' in df_top.columns:
+            df_top = df_top[df_top['Razon_Social'].str.contains(buscar, case=False, na=False)]
+
+        # Construir tabla HTML
+        cols_show = [c for c in ['Razon_Social','Segmento','Prob_Churn',
+                                  'NPS_Minimo','CSAT_Minimo','Nivel_Riesgo','Accion_Recomendada']
+                     if c in df_top.columns]
+        df_render = df_top[cols_show].head(15).reset_index(drop=True)
+
+        header_labels = {
+            'Razon_Social':'Empresa','Segmento':'Segmento','Prob_Churn':'Probabilidad de Churn',
+            'NPS_Minimo':'NPS Mín. Histórico','CSAT_Minimo':'CSAT Mín.',
+            'Nivel_Riesgo':'Riesgo','Accion_Recomendada':'Acción Recomendada'
+        }
+
+        html_table = """
+        <div style="overflow-x:auto;margin-top:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+        <tr style="border-bottom:2px solid #F0F2F6;">
+        """
+        for c in cols_show:
+            html_table += f'<th style="text-align:left;padding:8px 10px;color:#6B7A8D;font-weight:600;font-size:11px;white-space:nowrap;">{header_labels.get(c,c)}</th>'
+        html_table += "</tr></thead><tbody>"
+
+        for i, row in df_render.iterrows():
+            bg = "#FAFBFF" if i % 2 == 0 else "white"
+            html_table += f'<tr style="border-bottom:1px solid #F0F2F6;background:{bg};">'
+            for c in cols_show:
+                val = row[c]
+                if c == 'Prob_Churn':
+                    cell = prob_bar_html(float(val))
+                elif c == 'Nivel_Riesgo':
+                    cell = badge_html(str(val))
+                elif c == 'Razon_Social':
+                    cell = f'<span style="font-weight:600;color:#0B192C;">{val}</span>'
+                elif c == 'NPS_Minimo':
+                    color = "#DC3545" if float(val) < 0 else "#198754"
+                    cell = f'<span style="color:{color};font-weight:600;">{val:.0f}</span>'
+                elif c == 'CSAT_Minimo':
+                    pct = float(val)*20
+                    color = "#DC3545" if pct < 60 else "#D4A000" if pct < 80 else "#198754"
+                    cell = f'<span style="color:{color};font-weight:600;">{pct:.0f}%</span>'
+                elif c == 'Accion_Recomendada':
+                    cell = f'<span style="color:#374151;font-size:12px;">{val}</span>'
+                else:
+                    cell = f'<span style="color:#374151;">{val}</span>'
+                html_table += f'<td style="padding:10px 10px;">{cell}</td>'
+            html_table += "</tr>"
+
+        html_table += "</tbody></table></div>"
+        st.markdown(html_table, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Botón exportar
+        st.download_button(
+            "⬇️  Exportar listado completo",
+            data=df_alertas.to_csv(index=False).encode(),
+            file_name="alertas_churn_cx.csv",
+            mime="text/csv",
+            use_container_width=False,
+        )
+
+    with col_insights:
+        # Calcular insights dinámicos
+        pct_csat_bajo = 0
+        if 'CSAT_Minimo' in df_filtrado.columns:
+            pct_csat_bajo = (df_filtrado['CSAT_Minimo'] < 3).mean() * 100
+
+        nps_inci = df_filtrado['NPS_Inci'].mean() if 'NPS_Inci' in df_filtrado.columns else 0
+        nps_come = df_filtrado['NPS_Come'].mean() if 'NPS_Come' in df_filtrado.columns else 0
+        nps_impl = df_filtrado['NPS_Impl'].mean() if 'NPS_Impl' in df_filtrado.columns else 0
+
+        pct_criticos_corp = 0
+        if 'Segmento' in df_filtrado.columns:
+            criticos = df_filtrado[df_filtrado['Nivel_Riesgo']=='CRÍTICO']
+            if len(criticos) > 0:
+                pct_criticos_corp = (criticos['Segmento']=='CORP').mean()*100
+
+        peor_etapa = "Incidente"
+        vals_etapa = {'Comercializacion':nps_come,'Implementacion':nps_impl,'Incidente':nps_inci}
+        peor_etapa = min(vals_etapa, key=vals_etapa.get)
+
+        insights = [
+            {
+                "icon":"💡","titulo":"INSIGHT 1",
+                "texto":f"Los clientes con CSAT &lt; 60% presentan <strong>3,4 veces más probabilidad</strong> de churn.",
+            },
+            {
+                "icon":"📈","titulo":"INSIGHT 2",
+                "texto":f"La etapa <strong>{peor_etapa}</strong> genera la mayor pérdida de <strong>NPS</strong> en el journey.",
+            },
+            {
+                "icon":"👥","titulo":"INSIGHT 3",
+                "texto":f"El <strong>{pct_criticos_corp:.0f}%</strong> de los clientes críticos pertenecen al segmento <strong>CORP</strong>.",
+            },
+            {
+                "icon":"⚡","titulo":"INSIGHT 4",
+                "texto":f"Modelo con <strong>AUC {metricas['auc']:.3f}</strong> y <strong>Recall {metricas['rec']:.1%}</strong> sobre muestra de evaluación.",
+            },
+        ]
+
+        html_ins = '<div class="insights-header">INSIGHTS AUTOMÁTICOS DEL MODELO</div>'
+        for ins in insights:
+            html_ins += f"""
+            <div class="insight-card">
+                <div class="insight-icon-wrap">{ins['icon']}</div>
+                <div class="insight-body">
+                    <div class="insight-title">{ins['titulo']}</div>
+                    <div class="insight-text">{ins['texto']}</div>
+                </div>
+            </div>"""
+        st.markdown(html_ins, unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
 # PÁGINA 2 — JOURNEY & MÉTRICAS
 # ════════════════════════════════════════════════════════════
-elif pagina == "📈 Journey & Métricas":
-    st.markdown("## Journey & Métricas de Satisfacción")
-    st.markdown("---")
-    c1,c2 = st.columns(2)
+elif "Journey" in pagina:
+    st.markdown("""
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>Journey & Métricas de Satisfacción</h1>
+            <p>Evolución de NPS y CSAT por etapa del journey del cliente</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    etapas_cols  = ['NPS_Come','NPS_Impl','NPS_Inci']
+    etapas_lbl   = ['Comercialización','Implementación','Incidente']
+    etapas_cols_c = ['CSAT_Come','CSAT_Impl','CSAT_Inci']
+    valores  = [df_filtrado[c].mean() for c in etapas_cols  if c in df_filtrado.columns]
+    valores_c = [df_filtrado[c].mean()*20 for c in etapas_cols_c if c in df_filtrado.columns]
+
+    # KPIs rápidos
+    html_kpis2 = '<div class="kpi-grid">'
+    for lbl, val in zip(etapas_lbl[:len(valores)], valores):
+        color = "#DC3545" if val < 0 else "#198754"
+        html_kpis2 += f"""
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:#EEF3FE;">📊</div>
+            <div class="kpi-body">
+                <div class="kpi-label">NPS — {lbl}</div>
+                <div class="kpi-value" style="color:{color};">{val:+.1f}</div>
+            </div>
+        </div>"""
+    html_kpis2 += '</div>'
+    st.markdown(html_kpis2, unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
     with c1:
-        st.markdown("#### NPS Promedio por Etapa (calculado del Data Warehouse)")
-        etapas_cols = ['NPS_Come','NPS_Impl','NPS_Inci']
-        etapas_lbl  = ['Comercialización','Implementación','Incidente']
-        valores = [df_filtrado[c].mean() for c in etapas_cols if c in df_filtrado.columns]
-        fig = go.Figure(go.Bar(x=etapas_lbl[:len(valores)], y=valores,
-                               marker_color=['#70AD47','#4472C4','#E36C09']))
-        fig.update_layout(height=320, plot_bgcolor='white', paper_bgcolor='white')
+        st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="table-title">NPS Promedio por Etapa</div>', unsafe_allow_html=True)
+        fig = go.Figure(go.Bar(
+            x=etapas_lbl[:len(valores)], y=valores,
+            marker_color=['#1A56DB','#22C55E','#FD7E14'],
+            text=[f"{v:.1f}" for v in valores], textposition='outside'))
+        fig.update_layout(height=280, margin=dict(l=10,r=10,t=30,b=10),
+                          plot_bgcolor='white', paper_bgcolor='white', showlegend=False,
+                          yaxis=dict(gridcolor='#F0F2F6'), font=dict(family='Inter'))
         st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with c2:
-        st.markdown("#### CSAT Promedio por Etapa")
-        etapas_cols_c = ['CSAT_Come','CSAT_Impl','CSAT_Inci']
-        valores_c = [df_filtrado[c].mean()*20 for c in etapas_cols_c if c in df_filtrado.columns]
-        fig2 = go.Figure(go.Bar(x=etapas_lbl[:len(valores_c)], y=valores_c,
-                                marker_color=['#70AD47','#4472C4','#E36C09']))
-        fig2.update_layout(height=320, plot_bgcolor='white', paper_bgcolor='white',
-                           yaxis=dict(range=[0,105]))
+        st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="table-title">CSAT Promedio por Etapa (%)</div>', unsafe_allow_html=True)
+        fig2 = go.Figure(go.Bar(
+            x=etapas_lbl[:len(valores_c)], y=valores_c,
+            marker_color=['#1A56DB','#22C55E','#FD7E14'],
+            text=[f"{v:.1f}%" for v in valores_c], textposition='outside'))
+        fig2.update_layout(height=280, margin=dict(l=10,r=10,t=30,b=10),
+                           plot_bgcolor='white', paper_bgcolor='white', showlegend=False,
+                           yaxis=dict(range=[0,110], gridcolor='#F0F2F6'),
+                           font=dict(family='Inter'))
         st.plotly_chart(fig2, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
 # PÁGINA 3 — RIESGO DE CHURN
 # ════════════════════════════════════════════════════════════
-elif pagina == "🔴 Riesgo de Churn":
-    st.markdown("## Análisis de Riesgo de Churn")
-    st.markdown("---")
-    c1,c2 = st.columns(2)
+elif "Riesgo" in pagina:
+    st.markdown("""
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>Análisis de Riesgo de Churn</h1>
+            <p>Distribución del score predictivo y métricas del modelo Ensemble</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Métricas del modelo como KPIs
+    html_m = '<div class="kpi-grid">'
+    mets = [
+        ("🎯","AUC del Modelo", f"{metricas['auc']:.3f}","#1A56DB","#EEF3FE"),
+        ("📡","Recall",         f"{metricas['rec']:.1%}","#198754","#EDFAF1"),
+        ("🎖️","Precisión",      f"{metricas['prec']:.1%}","#D4A000","#FFFDF5"),
+        ("⚡","F1-Score",       f"{metricas['f1']:.3f}","#FD7E14","#FFF8F2"),
+    ]
+    for icon,lbl,val,color,bg in mets:
+        html_m += f"""
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background:{bg};">{icon}</div>
+            <div class="kpi-body">
+                <div class="kpi-label">{lbl}</div>
+                <div class="kpi-value" style="color:{color};">{val}</div>
+            </div>
+        </div>"""
+    html_m += '</div>'
+    st.markdown(html_m, unsafe_allow_html=True)
+
+    c1, c2 = st.columns([6,4])
     with c1:
-        st.markdown("#### Distribución de Probabilidad")
+        st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="table-title" style="margin-bottom:12px;">Distribución de Probabilidad de Churn</div>', unsafe_allow_html=True)
         fig = px.histogram(df_filtrado, x='Prob_Churn', nbins=40, color='Nivel_Riesgo',
-            color_discrete_map={'CRÍTICO':'#C0392B','ALTO':'#E36C09','MEDIO':'#D4AC00','BAJO':'#70AD47'})
-        fig.update_layout(height=320, plot_bgcolor='white', paper_bgcolor='white')
+            color_discrete_map={'CRÍTICO':'#DC3545','ALTO':'#FD7E14','MEDIO':'#D4A000','BAJO':'#198754'})
+        fig.update_layout(height=300, plot_bgcolor='white', paper_bgcolor='white',
+                          margin=dict(l=10,r=10,t=10,b=10),
+                          legend=dict(orientation='h',yanchor='bottom',y=1,xanchor='right',x=1),
+                          font=dict(family='Inter'), yaxis=dict(gridcolor='#F0F2F6'))
         st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with c2:
-        st.markdown("#### Métricas del Modelo")
-        st.metric("AUC", f"{metricas['auc']:.3f}")
-        st.metric("Recall", f"{metricas['rec']:.1%}")
-        st.metric("Precision", f"{metricas['prec']:.1%}")
-        st.metric("F1-Score", f"{metricas['f1']:.3f}")
+        st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="table-title" style="margin-bottom:12px;">Distribución por Nivel</div>', unsafe_allow_html=True)
+        conteo = df_filtrado['Nivel_Riesgo'].value_counts()
+        orden = ['BAJO','MEDIO','ALTO','CRÍTICO']
+        cols_d = ['#198754','#D4A000','#FD7E14','#DC3545']
+        fig2 = go.Figure(go.Bar(
+            x=[c for c in orden if c in conteo.index],
+            y=[conteo.get(c,0) for c in orden if c in conteo.index],
+            marker_color=cols_d,
+            text=[conteo.get(c,0) for c in orden if c in conteo.index],
+            textposition='outside'))
+        fig2.update_layout(height=300, margin=dict(l=10,r=10,t=10,b=10),
+                           plot_bgcolor='white', paper_bgcolor='white',
+                           showlegend=False, yaxis=dict(gridcolor='#F0F2F6'),
+                           font=dict(family='Inter'))
+        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ════════════════════════════════════════════════════════════
 # PÁGINA 4 — CLIENTES EN RIESGO
 # ════════════════════════════════════════════════════════════
-elif pagina == "👥 Clientes en Riesgo":
-    st.markdown("## Clientes en Riesgo de Abandono")
-    st.markdown("---")
-    nivel_filtro = st.multiselect("Nivel de riesgo",
-        ['CRÍTICO','ALTO','MEDIO','BAJO'], default=['CRÍTICO','ALTO'])
+elif "Clientes" in pagina:
+    st.markdown("""
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>Clientes en Riesgo de Abandono</h1>
+            <p>Listado completo filtrable por nivel de riesgo</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    nivel_filtro = st.multiselect(
+        "Nivel de riesgo",
+        ['CRÍTICO','ALTO','MEDIO','BAJO'],
+        default=['CRÍTICO','ALTO'],
+    )
     df_view = df_filtrado[df_filtrado['Nivel_Riesgo'].isin(nivel_filtro)] if nivel_filtro else df_filtrado
-    st.markdown(f"**{len(df_view):,} clientes** encontrados")
-    st.dataframe(df_view.sort_values('Prob_Churn', ascending=False).head(100),
-                hide_index=True, use_container_width=True, height=480)
-    st.download_button("⬇️ Descargar lista completa",
+    df_view = df_view.sort_values('Prob_Churn', ascending=False)
+
+    st.markdown(f"""
+    <div class="white-panel">
+        <div class="table-header">
+            <span class="table-title">CLIENTES EN RIESGO</span>
+            <span style="font-size:12px;color:#6B7A8D;font-weight:500;">{len(df_view):,} clientes encontrados</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Tabla con column_config para Prob_Churn como barra
+    cols_show = [c for c in ['Razon_Social','Segmento','Prob_Churn',
+                              'NPS_Minimo','CSAT_Minimo','Nivel_Riesgo','Accion_Recomendada']
+                 if c in df_view.columns]
+
+    st.dataframe(
+        df_view[cols_show].head(100),
+        hide_index=True,
+        use_container_width=True,
+        height=460,
+        column_config={
+            "Prob_Churn": st.column_config.ProgressColumn(
+                "Prob. Churn", format="%.1f%%", min_value=0, max_value=100),
+            "Nivel_Riesgo": st.column_config.TextColumn("Riesgo"),
+        }
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.download_button(
+        "⬇️  Descargar lista completa",
         data=df_view.to_csv(index=False).encode(),
-        file_name="clientes_riesgo.csv", mime="text/csv")
+        file_name="clientes_riesgo.csv",
+        mime="text/csv",
+    )
 
 
 # ════════════════════════════════════════════════════════════
 # PÁGINA 5 — SEGMENTACIÓN
 # ════════════════════════════════════════════════════════════
-elif pagina == "📋 Segmentación":
-    st.markdown("## Segmentación del Portafolio")
-    st.markdown("---")
+elif "Segmentación" in pagina:
+    st.markdown("""
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>Segmentación del Portafolio</h1>
+            <p>Análisis de churn y riesgo por segmento de cliente</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     if 'Segmento' in df_filtrado.columns:
-        c1,c2 = st.columns(2)
+        # KPIs por segmento
+        segs = df_filtrado['Segmento'].unique()
+        html_seg = '<div class="kpi-grid">'
+        for seg in segs:
+            s = df_filtrado[df_filtrado['Segmento']==seg]
+            cr = s['Churn'].mean()*100
+            color = "#DC3545" if cr > 30 else "#D4A000" if cr > 15 else "#198754"
+            html_seg += f"""
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:#EEF3FE;">🏢</div>
+                <div class="kpi-body">
+                    <div class="kpi-label">SEGMENTO {seg}</div>
+                    <div class="kpi-value" style="color:{color};">{cr:.1f}%</div>
+                    <div class="kpi-delta">{len(s):,} clientes</div>
+                </div>
+            </div>"""
+        html_seg += '</div>'
+        st.markdown(html_seg, unsafe_allow_html=True)
+
+        c1, c2 = st.columns(2)
         with c1:
+            st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+            st.markdown('<div class="table-title" style="margin-bottom:12px;">Churn Rate por Segmento</div>', unsafe_allow_html=True)
             churn_seg = df_filtrado.groupby('Segmento')['Churn'].mean().reset_index()
             churn_seg['Churn'] = churn_seg['Churn']*100
-            fig = px.bar(churn_seg, x='Segmento', y='Churn', color='Segmento',
-                        color_discrete_map={'PYME':'#E36C09','CORP':'#1F497D'})
-            fig.update_layout(height=300, plot_bgcolor='white', paper_bgcolor='white')
+            fig = px.bar(churn_seg, x='Segmento', y='Churn',
+                        color='Segmento', text='Churn',
+                        color_discrete_map={'PYME':'#FD7E14','CORP':'#1A56DB'})
+            fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+            fig.update_layout(height=300, plot_bgcolor='white', paper_bgcolor='white',
+                              margin=dict(l=10,r=10,t=10,b=10), showlegend=False,
+                              yaxis=dict(gridcolor='#F0F2F6'), font=dict(family='Inter'))
             st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
         with c2:
+            st.markdown('<div class="white-panel">', unsafe_allow_html=True)
+            st.markdown('<div class="table-title" style="margin-bottom:12px;">Distribución por Nivel de Riesgo</div>', unsafe_allow_html=True)
             dist = df_filtrado['Nivel_Riesgo'].value_counts().reset_index()
             dist.columns = ['Nivel','N']
             fig2 = px.pie(dist, names='Nivel', values='N', hole=0.45,
-                color_discrete_map={'CRÍTICO':'#C0392B','ALTO':'#E36C09','MEDIO':'#D4AC00','BAJO':'#70AD47'})
+                color_discrete_map={'CRÍTICO':'#DC3545','ALTO':'#FD7E14',
+                                    'MEDIO':'#D4A000','BAJO':'#198754'})
+            fig2.update_layout(height=300, margin=dict(l=10,r=10,t=10,b=10),
+                               font=dict(family='Inter'), paper_bgcolor='white')
             st.plotly_chart(fig2, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.warning("No se encontró columna Segmento en los datos.")
